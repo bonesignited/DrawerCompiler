@@ -33,3 +33,7 @@ class TokenType(Enum):
     non = "NONTOKEN"
 
     err = "ERRTOKEN"
+
+
+if __name__ == '__main__':
+    print("index", end=",")
