@@ -3,65 +3,33 @@ from enum import Enum, unique
 
 @unique
 class TokenType(Enum):
-    reserved = {
-        "id": 1,
-        "representation": [
-            "ORIGIN",
-            "SCALE",
-            "ROT",
-            "IS",
-            "TO",
-            "STEP",
-            "DRAW",
-            "FOR",
-            "FROM"
-        ]
-    }
+    origin = "ORIGIN"
+    scale = "SCALE"
+    rot = "ROT"
+    is_ = "IS"
+    to = "TO"
+    step = "STEP"
+    draw = "DRAW"
+    for_ = "FOR"
+    from_ = "FORM"
 
-    params = {
-        "id": 2,
-        "representation": ["T"]
-    }
+    t = "T"
 
-    separator = {
-        "id": 3,
-        "representation": [
-            "SEMICO",
-            "L_BRACKET",
-            "R_BRACKET",
-            "COMMA"
-        ]
-    }
+    semico = ";"
+    l_bracket = "("
+    r_bracket = ")"
+    comma = ","
 
-    operator = {
-        "id": 4,
-        "representation": [
-            "PLUS",
-            "MINUS",
-            "MUL",
-            "DIV",
-            "POWER"
-        ]
-    }
+    plus = "+"
+    minus = "-"
+    mul = "*"
+    div = "/"
+    power = "**"
 
-    func = {
-        "id": 5,
-        "representation": ["func"]
-    }
+    func = "FUNC"
 
-    const = {
-        "id": 6,
-        "representation": ["CONST_ID"]
-    }
+    const = "CONST_ID"
 
-    non = {
-        "id": 7,
-        "representation": ["NONTOKEN"]
-    }
+    non = "NONTOKEN"
 
-    err = {
-        "id": 8,
-        "representation": ["ERRTOKEN"]
-    }
-
-
+    err = "ERRTOKEN"
