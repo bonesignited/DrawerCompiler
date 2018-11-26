@@ -3,8 +3,7 @@ from lexical.token_type import TokenType
 
 
 class ExpressionNode:
-    def __init__(self, kind, left=None, right=None,
-                 func=None, const=None, param=None, child=None):
+    def __init__(self, token_type, **kwargs):
         """
         表达式节点对象
         :param kind: 记号种类
@@ -15,13 +14,49 @@ class ExpressionNode:
         :param const: 常数，绑定右值
         :param param: 参数T，绑定左值
         """
-        self.kind = kind
-        self.left = left
-        self.right = right
-        self.func = func
-        self.child = child
-        self.const = const
-        self.param = param
+        self.kind = token_type
+        if token_type == TokenType.const:
+            self.const = kwargs.get("const_value")
+        elif token_type == TokenType.t:
+            self.param = kwargs.get("t")
+        elif token_type == TokenType.func:
+            self.func = kwargs.get("func")
+            self.child = kwargs.get("child")
+        else:
+            self.left = kwargs.get("left")
+            self.right = kwargs.get("right")
+
+    def print_tree(self, indent: int):
+        for i in range(0, indent):
+            print("\t", end="")
+        print(">> ", end="")
+        tmp_type = self.kind
+        if tmp_type == TokenType.plus:
+            print("+")
+        elif tmp_type == TokenType.minus:
+            print("-")
+        elif tmp_type == TokenType.mul:
+            print("*")
+        elif tmp_type == TokenType.div:
+            print("/")
+        elif tmp_type == TokenType.power:
+            print("**")
+        elif tmp_type == TokenType.func:
+            print(self.func)
+        elif tmp_type == TokenType.const:
+            print(self.const)
+        elif tmp_type == TokenType.t:
+            print("T")
+        else:
+            print("Error Tree Node")
+
+        if self.kind in [TokenType.const, TokenType.t]:
+            return
+        if self.kind == TokenType.func:
+            self.child.print_tree(indent + 1)
+        else:
+            self.left.print_tree(indent + 1)
+            self.right.print_tree(indent + 1)
 
 
 class StmtProperty:
@@ -80,10 +115,10 @@ class Parser:
         self.match_token(TokenType.is_)
         self.match_token(TokenType.l_bracket)
         x_origin = self.expression()
-        Parser.print_tree(x_origin, 0)
+        x_origin.print_tree(0)
         self.match_token(TokenType.comma)
         y_origin = self.expression()
-        Parser.print_tree(y_origin, 0)
+        y_origin.print_tree(0)
         self.match_token(TokenType.r_bracket)
         return
 
@@ -91,7 +126,7 @@ class Parser:
         self.match_token(TokenType.rot)
         self.match_token(TokenType.is_)
         rot = self.expression()
-        Parser.print_tree(rot, 0)
+        rot.print_tree(0)
         return
 
     def scale_statement(self):
@@ -99,10 +134,10 @@ class Parser:
         self.match_token(TokenType.is_)
         self.match_token(TokenType.l_bracket)
         x_scale = self.expression()
-        Parser.print_tree(x_scale, 0)
+        x_scale.print_tree(0)
         self.match_token(TokenType.comma)
         y_scale = self.expression()
-        Parser.print_tree(y_scale, 0)
+        y_scale.print_tree(0)
         self.match_token(TokenType.r_bracket)
         return
 
@@ -111,39 +146,22 @@ class Parser:
         self.match_token(TokenType.t)
         self.match_token(TokenType.from_)
         start = self.expression()
-        Parser.print_tree(start, 0)
+        start.print_tree(0)
         self.match_token(TokenType.to)
         end = self.expression()
-        Parser.print_tree(end, 0)
+        end.print_tree(0)
         self.match_token(TokenType.step)
         step = self.expression()
-        Parser.print_tree(step, 0)
+        step.print_tree(0)
         self.match_token(TokenType.draw)
         self.match_token(TokenType.l_bracket)
         x = self.expression()
-        Parser.print_tree(x, 0)
+        x.print_tree(0)
         self.match_token(TokenType.comma)
         y = self.expression()
-        Parser.print_tree(y, 0)
+        y.print_tree(0)
         self.match_token(TokenType.r_bracket)
         return
-
-    @staticmethod
-    def make_node(token_type, **kwargs):
-        kwargs.setdefault("const_value", None)
-        kwargs.setdefault("t", None)
-        kwargs.setdefault("func", None)
-        kwargs.setdefault("left", None)
-        kwargs.setdefault("right", None)
-        kwargs.setdefault("child", None)
-        if token_type == TokenType.const:
-            return ExpressionNode(token_type, const=kwargs["const_value"])
-        elif token_type == TokenType.t:
-            return ExpressionNode(token_type, param=kwargs["t"])
-        elif token_type == TokenType.func:
-            return ExpressionNode(token_type, func=kwargs["func"], child=kwargs["child"])
-        else:
-            return ExpressionNode(token_type, left=kwargs["left"], right=kwargs["right"])
 
     def expression(self):
         left = self.term()
@@ -151,7 +169,7 @@ class Parser:
             token_tmp = self.current.type
             self.match_token(token_tmp)
             right = self.term()
-            left = self.make_node(token_tmp, left=left, right=right)
+            left = ExpressionNode(token_tmp, left=left, right=right)
         return left
 
     def term(self):
@@ -160,7 +178,7 @@ class Parser:
             token_tmp = self.current.type
             self.match_token(token_tmp)
             right = self.factor()
-            left = self.make_node(token_tmp, left=left, right=right)
+            left = ExpressionNode(token_tmp, left=left, right=right)
         return left
 
     def factor(self):  # 代表右结合的 +/-
@@ -172,7 +190,7 @@ class Parser:
             self.match_token(TokenType.minus)
             right = self.factor()
             left = ExpressionNode(TokenType.const, const=0.0)
-            right = self.make_node(TokenType.minus, left=left, right=right)
+            right = ExpressionNode(TokenType.minus, left=left, right=right)
 
         else:
             right = self.component()
@@ -184,24 +202,24 @@ class Parser:
         if self.current.type == TokenType.power:
             self.match_token(TokenType.power)
             right = self.component()
-            left = self.make_node(TokenType.power, left=left, right=right)
+            left = ExpressionNode(TokenType.power, left=left, right=right)
         return left
 
     def atom(self):
         tmp_token = self.current
         if self.current.type == TokenType.const:
             self.match_token(TokenType.const)
-            quark = self.make_node(tmp_token.type, const_value=tmp_token.value)
+            quark = ExpressionNode(tmp_token.type, const_value=tmp_token.value)
 
         elif self.current.type == TokenType.t:
             self.match_token(TokenType.t)
-            quark = self.make_node(tmp_token.type, t=StmtProperty.parameter)
+            quark = ExpressionNode(tmp_token.type, t=StmtProperty.parameter)
 
         elif self.current.type == TokenType.func:
             self.match_token(TokenType.func)
             self.match_token(TokenType.l_bracket)
             temp = self.expression()
-            quark = self.make_node(tmp_token.type, func=tmp_token.func, child=temp)
+            quark = ExpressionNode(tmp_token.type, func=tmp_token.func, child=temp)
             self.match_token(TokenType.r_bracket)
 
         elif self.current.type == TokenType.l_bracket:
@@ -213,39 +231,6 @@ class Parser:
             raise ValueError("不是预期的记号")
 
         return quark
-
-    @staticmethod
-    def print_tree(root: ExpressionNode, indent: int):
-        for i in range(0, indent):
-            print("\t", end="")
-        print(">> ", end="")
-        tmp_type = root.kind
-        if tmp_type == TokenType.plus:
-            print("+")
-        elif tmp_type == TokenType.minus:
-            print("-")
-        elif tmp_type == TokenType.mul:
-            print("*")
-        elif tmp_type == TokenType.div:
-            print("/")
-        elif tmp_type == TokenType.power:
-            print("**")
-        elif tmp_type == TokenType.func:
-            print(root.func)
-        elif tmp_type == TokenType.const:
-            print(root.const)
-        elif tmp_type == TokenType.t:
-            print("T")
-        else:
-            print("Error Tree Node")
-
-        if root.kind in [TokenType.const, TokenType.t]:
-            return
-        if root.kind == TokenType.func:
-            Parser.print_tree(root.child, indent + 1)
-        else:
-            Parser.print_tree(root.left, indent + 1)
-            Parser.print_tree(root.right, indent + 1)
 
 
 if __name__ == '__main__':
