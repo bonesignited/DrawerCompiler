@@ -1,5 +1,19 @@
+from math import cos, sin
+
 from lexical.lex_analyzer import LexAnalyzer
 from lexical.token_type import TokenType
+import turtle
+
+
+wn = turtle.Screen()  # creates a graphics window
+wn.screensize(800, 600)
+wn.setup(800, 600)
+alex = turtle.Turtle()  # create a turtle named alex
+alex.pensize(6)
+alex.speed(50)
+print(alex.position())
+alex.dot()
+alex.penup()
 
 
 class ExpressionNode:
@@ -60,7 +74,76 @@ class ExpressionNode:
 
 
 class StmtProperty:
-    parameter = 0
+    parameter = 0.0
+    origin_x = 0.0
+    origin_y = 0.0
+    rot_ang = 0.0
+    scale_x = 1
+    scale_y = 1
+
+
+def get_value(root: ExpressionNode):
+    if not root:
+        return 0.0
+    if root.kind == TokenType.plus:
+        return get_value(root.left) + get_value(root.right)
+    elif root.kind == TokenType.minus:
+        return get_value(root.left) - get_value(root.right)
+    elif root.kind == TokenType.mul:
+        return get_value(root.left) * get_value(root.right)
+    elif root.kind == TokenType.div:
+        return get_value(root.left) / get_value(root.right)
+    elif root.kind == TokenType.power:
+        return get_value(root.left) ** get_value(root.right)
+    elif root.kind == TokenType.func:
+        return root.func(get_value(root.child))
+    elif root.kind == TokenType.const:
+        return root.const
+    elif root.kind == TokenType.t:
+        return StmtProperty.parameter
+    else:
+        return 0.0
+
+
+def calc_coordinate(x: ExpressionNode, y: ExpressionNode):
+    local_x = get_value(x)
+    local_y = get_value(y)
+    local_x *= StmtProperty.scale_x
+    local_y *= StmtProperty.scale_y
+    temp = local_x * cos(StmtProperty.rot_ang) + local_y * sin(StmtProperty.rot_ang)
+    local_y = local_y * cos(StmtProperty.rot_ang) + local_x * sin(StmtProperty.rot_ang)
+    local_x = temp
+    local_x += StmtProperty.origin_x
+    local_y += StmtProperty.origin_y
+    return local_x, local_y
+
+
+def draw_pixel(x: float, y: float):
+    alex.goto(x, y)
+    alex.dot("black")
+
+
+def draw_loop(start, end, step, x_expr, y_expr):
+    StmtProperty.parameter = start
+    while StmtProperty.parameter <= end:
+        x_val, y_val = calc_coordinate(x_expr, y_expr)
+        draw_pixel(x_val, y_val)
+        StmtProperty.parameter += step
+    return
+
+
+def set_origin(x, y):
+    StmtProperty.origin_x = x
+    StmtProperty.origin_y = y
+
+
+def set_rot(angle):
+    StmtProperty.rot_ang = angle
+
+
+def set_scale(x, y):
+    StmtProperty.scale_x = x
+    StmtProperty.scale_y = y
 
 
 class Parser:
@@ -115,30 +198,36 @@ class Parser:
         self.match_token(TokenType.is_)
         self.match_token(TokenType.l_bracket)
         x_origin = self.expression()
-        x_origin.print_tree(0)
+        # x_origin.print_tree(0)
         self.match_token(TokenType.comma)
         y_origin = self.expression()
-        y_origin.print_tree(0)
+        # y_origin.print_tree(0)
         self.match_token(TokenType.r_bracket)
+        set_origin(get_value(x_origin), get_value(y_origin))
+        alex.setposition(StmtProperty.origin_x, StmtProperty.origin_y)
         return
 
     def rot_statement(self):
         self.match_token(TokenType.rot)
         self.match_token(TokenType.is_)
         rot = self.expression()
-        rot.print_tree(0)
+        # rot.print_tree(0)
+        set_rot(get_value(rot))
+        alex.radians()
+        alex.left(StmtProperty.rot_ang)
         return
 
     def scale_statement(self):
-        self.match_token(TokenType.origin)
+        self.match_token(TokenType.scale)
         self.match_token(TokenType.is_)
         self.match_token(TokenType.l_bracket)
         x_scale = self.expression()
-        x_scale.print_tree(0)
+        # x_scale.print_tree(0)
         self.match_token(TokenType.comma)
         y_scale = self.expression()
-        y_scale.print_tree(0)
+        # y_scale.print_tree(0)
         self.match_token(TokenType.r_bracket)
+        set_scale(get_value(x_scale), get_value(y_scale))
         return
 
     def for_statement(self):
@@ -146,21 +235,22 @@ class Parser:
         self.match_token(TokenType.t)
         self.match_token(TokenType.from_)
         start = self.expression()
-        start.print_tree(0)
+        # start.print_tree(0)
         self.match_token(TokenType.to)
         end = self.expression()
-        end.print_tree(0)
+        # end.print_tree(0)
         self.match_token(TokenType.step)
         step = self.expression()
-        step.print_tree(0)
+        # step.print_tree(0)
         self.match_token(TokenType.draw)
         self.match_token(TokenType.l_bracket)
         x = self.expression()
-        x.print_tree(0)
+        # x.print_tree(0)
         self.match_token(TokenType.comma)
         y = self.expression()
-        y.print_tree(0)
+        # y.print_tree(0)
         self.match_token(TokenType.r_bracket)
+        draw_loop(get_value(start), get_value(end), get_value(step), x, y)
         return
 
     def expression(self):
@@ -189,7 +279,7 @@ class Parser:
         elif self.current.type == TokenType.minus:
             self.match_token(TokenType.minus)
             right = self.factor()
-            left = ExpressionNode(TokenType.const, const=0.0)
+            left = ExpressionNode(TokenType.const, const_value=0.0)
             right = ExpressionNode(TokenType.minus, left=left, right=right)
 
         else:
@@ -236,3 +326,4 @@ class Parser:
 if __name__ == '__main__':
     tree = Parser("test.txt")
     tree.parse()
+    turtle.done()

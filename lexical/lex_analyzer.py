@@ -6,13 +6,13 @@ from lexical.token_type import TokenType
 
 class Token:
     def __init__(self, type, text, value=0.0, func=None):
-        '''
+        """
 
         :param type: Token_Type
         :param text: str
         :param value: float if type is const
         :param func: func if type is function
-        '''
+        """
         self.type = type
         self.text = text
         self.value = value
@@ -50,7 +50,7 @@ class LexAnalyzer:
         self.file = file
 
     def read_line(self):
-        with open(self.file, 'r') as f:
+        with open(self.file, 'r', encoding="utf-8") as f:
             for line in f:
                 yield line
 
