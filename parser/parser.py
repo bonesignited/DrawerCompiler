@@ -4,14 +4,14 @@ from lexical.lex_analyzer import LexAnalyzer
 from lexical.token_type import TokenType
 import turtle
 
-wn = turtle.Screen()  # creates a graphics window
+wn = turtle.Screen()
 wn.screensize(800, 600)
 wn.setup(800, 600)
-alex = turtle.Turtle()  # create a turtle named alex
+alex = turtle.Turtle()
 alex.pensize(6)
 alex.speed(50)
 print(alex.position())
-alex.dot()
+# alex.dot()
 alex.penup()
 
 
@@ -61,7 +61,7 @@ class ExpressionNode:
         elif tmp_type == TokenType.t:
             print("T")
         else:
-            print("Error Tree Node")
+            print("错误的树节点")
 
         if self.kind in [TokenType.const, TokenType.t]:
             return
@@ -159,12 +159,19 @@ class Parser:
         except IndexError:
             print("语法分析结束")
         if self.current.type == TokenType.err:
-            raise ValueError("错误的记号！！！！！")
+            print("[No.{0}] 记号本身错误，请检查关键字是否拼写正确或者有非法的运算符".format(self.index))
+            exit(1)
         self.index += 1
 
     def match_token(self, token_type):
         if self.current.type != token_type:
-            raise ValueError("记号类型不匹配！！！！！")
+            print("[No.{0}] 该记号种类为 ".format(self.index) + str(self.current.type))
+            print("期望的记号种类为 " + str(token_type))
+            if token_type == TokenType.semico:
+                print("缺少分号")
+                exit(1)
+            print("[No.{0}] 记号类型不匹配".format(self.index))
+            exit(1)
         self.fetch_token()
 
     def parse(self):
@@ -190,7 +197,8 @@ class Parser:
             self.for_statement()
 
         else:
-            raise ValueError("Statement fault!!!")
+            print("[No.{0}] 不是合法的语句".format(self.index))
+            exit(1)
 
     def origin_statement(self):
         self.match_token(TokenType.origin)
