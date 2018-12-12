@@ -3,6 +3,7 @@ from enum import Enum, unique
 
 @unique
 class TokenType(Enum):
+    """枚举类，记录记号类型"""
     origin = "ORIGIN"
     scale = "SCALE"
     rot = "ROT"
@@ -27,11 +28,8 @@ class TokenType(Enum):
     power = "**"
 
     func = "FUNC"
-
     const = "CONST_ID"
-
     non = "NONTOKEN"
-
     err = "ERRTOKEN"
 
 

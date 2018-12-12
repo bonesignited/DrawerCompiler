@@ -1,32 +1,36 @@
 from math import cos, sin
 
-from lexical.lex_analyzer import LexAnalyzer
-from lexical.token_type import TokenType
+from lex_analyzer import LexAnalyzer
+from token_type import TokenType
 import turtle
 
 wn = turtle.Screen()
-wn.screensize(800, 600)
-wn.setup(800, 600)
+wn.screensize(1200, 1000)
+wn.setup(1200, 1000)
 alex = turtle.Turtle()
+alex.radians()
 alex.pensize(6)
 alex.speed(50)
 print(alex.position())
-# alex.dot()
+alex.dot()
 alex.penup()
 
 
 class ExpressionNode:
+    """表达式节点对象
+
+    Args:
+        token_type (TokenType): 节点对应的记号类型
+
+    Keyword Args:
+        const_value (float): 常量值
+        t (float): 参数 T
+        func (object): 内置函数
+        chile (ExpressionNode): 孩子节点，父节点对应的记号类型是 TokenType.func
+        left (ExpressionNode): 左孩子节点
+        right (ExpressionNode): 右孩子节点
+    """
     def __init__(self, token_type, **kwargs):
-        """
-        表达式节点对象
-        :param kind: 记号种类
-        :param left: 二元运算左边
-        :param right: 二元运算右边
-        :param func: 函数调用
-        :param child: 函数括号里的表达式
-        :param const: 常数，绑定右值
-        :param param: 参数T，绑定左值
-        """
         self.kind = token_type
         if token_type == TokenType.const:
             self.const = kwargs.get("const_value")
@@ -40,6 +44,11 @@ class ExpressionNode:
             self.right = kwargs.get("right")
 
     def print_tree(self, indent: int):
+        """递归打印语法树
+
+        Args:
+            indent (int): 语法树每一层对应的缩进
+        """
         for i in range(0, indent):
             print("\t", end="")
         print(">> ", end="")
@@ -73,6 +82,11 @@ class ExpressionNode:
 
 
 def get_value(root):
+    """计算表达式的值
+
+    Args:
+        root (ExpressionNode): 表达式的根节点
+    """
     if not root:
         return 0.0
     if root.kind == TokenType.plus:
@@ -96,6 +110,8 @@ def get_value(root):
 
 
 class Property:
+    """语句属性
+    """
     parameter = 0.0
     origin_x = 0.0
     origin_y = 0.0
@@ -104,13 +120,18 @@ class Property:
     scale_y = 1
 
 
-def calc_coordinate(x: ExpressionNode, y: ExpressionNode):
+def calc_coordinate(x, y):
+    """计算点的坐标
+    Args:
+        x (ExpressionNode): x 坐标的表达式节点
+        y (ExpressionNode): y 坐标的表达式节点
+    """
     local_x = get_value(x)
     local_y = get_value(y)
     local_x *= Property.scale_x
     local_y *= Property.scale_y
     temp = local_x * cos(Property.rot_ang) + local_y * sin(Property.rot_ang)
-    local_y = local_y * cos(Property.rot_ang) + local_x * sin(Property.rot_ang)
+    local_y = local_y * cos(Property.rot_ang) - local_x * sin(Property.rot_ang)
     local_x = temp
     local_x += Property.origin_x
     local_y += Property.origin_y
@@ -123,6 +144,15 @@ def draw_pixel(x: float, y: float):
 
 
 def draw_loop(start, end, step, x_expr, y_expr):
+    """for-draw 语句中，根据起点、终点、步长、x 坐标、y 坐标画出图形
+
+    Args:
+        start (float): 起点
+        end (float): 终点
+        step (float): 步长
+        x_expr (ExpressionNode): x 坐标
+        y_expr (ExpressionNode): y 坐标
+    """
     Property.parameter = start
     while Property.parameter <= end:
         x_val, y_val = calc_coordinate(x_expr, y_expr)
@@ -146,7 +176,21 @@ def set_scale(x, y):
 
 
 class Parser:
+    """语法分析器
+
+    Attributes:
+        tokens (list): 记号流
+        index (int): 遍历记号流时当前记号的索引
+        tokens_length (int): 记号流长度
+        current (Token): 遍历记号流时记录当前记号
+    """
+
     def __init__(self, file):
+        """初始化语法分析器，同时调用词法分析器获取记号流
+
+        Args:
+             file (file): 源程序文件
+        """
         lex_analyzer = LexAnalyzer(file)
         self.tokens = lex_analyzer.get_token()
         self.index = 0
@@ -154,36 +198,45 @@ class Parser:
         self.current = None
 
     def fetch_token(self):
+        """从记号流中获取记号，在 match_token() 中被调用"""
         try:
             self.current = self.tokens[self.index]
         except IndexError:
             print("语法分析结束")
         if self.current.type == TokenType.err:
             print("[No.{0}] 记号本身错误，请检查关键字是否拼写正确或者有非法的运算符".format(self.index))
-            exit(1)
+            # exit(1)
         self.index += 1
 
     def match_token(self, token_type):
+        """根据预期的记号类型判断当前记号是否合法，不合法则输出错误信息，反之获取下一记号
+
+        Args:
+            token_type (TokenType): 预期的记号类型
+        """
         if self.current.type != token_type:
             print("[No.{0}] 该记号种类为 ".format(self.index) + str(self.current.type))
             print("期望的记号种类为 " + str(token_type))
             if token_type == TokenType.semico:
                 print("缺少分号")
-                exit(1)
+                # exit(1)
             print("[No.{0}] 记号类型不匹配".format(self.index))
-            exit(1)
+            # exit(1)
         self.fetch_token()
 
     def parse(self):
+        """开始语法分析"""
         self.fetch_token()
         self.program()
 
     def program(self):
+        """遍历记号流"""
         while self.index < self.tokens_length:
             self.statement()
             self.match_token(TokenType.semico)
 
     def statement(self):
+        """判断语句类型，调用对应语句的子程序"""
         if self.current.type == TokenType.origin:
             self.origin_statement()
 
@@ -198,69 +251,73 @@ class Parser:
 
         else:
             print("[No.{0}] 不是合法的语句".format(self.index))
-            exit(1)
+            # exit(1)
 
     def origin_statement(self):
+        """origin 语句子程序，设置坐标原点"""
         self.match_token(TokenType.origin)
         self.match_token(TokenType.is_)
         self.match_token(TokenType.l_bracket)
         x_origin = self.expression()
-        # x_origin.print_tree(0)
+        x_origin.print_tree(0)
         self.match_token(TokenType.comma)
         y_origin = self.expression()
-        # y_origin.print_tree(0)
+        y_origin.print_tree(0)
         self.match_token(TokenType.r_bracket)
         set_origin(get_value(x_origin), get_value(y_origin))
         alex.setposition(Property.origin_x, Property.origin_y)
         return
 
     def rot_statement(self):
+        """rot 语句子程序，设置图形旋转角度"""
         self.match_token(TokenType.rot)
         self.match_token(TokenType.is_)
         rot = self.expression()
-        # rot.print_tree(0)
+        rot.print_tree(0)
         set_rot(get_value(rot))
-        alex.radians()
         alex.left(Property.rot_ang)
         return
 
     def scale_statement(self):
+        """scale 语句子程序，设置坐标轴比例"""
         self.match_token(TokenType.scale)
         self.match_token(TokenType.is_)
         self.match_token(TokenType.l_bracket)
         x_scale = self.expression()
-        # x_scale.print_tree(0)
+        x_scale.print_tree(0)
         self.match_token(TokenType.comma)
         y_scale = self.expression()
-        # y_scale.print_tree(0)
+        y_scale.print_tree(0)
         self.match_token(TokenType.r_bracket)
         set_scale(get_value(x_scale), get_value(y_scale))
         return
 
     def for_statement(self):
+        """for 语句子程序，并画出图形"""
         self.match_token(TokenType.for_)
         self.match_token(TokenType.t)
         self.match_token(TokenType.from_)
         start = self.expression()
-        # start.print_tree(0)
+        start.print_tree(0)
         self.match_token(TokenType.to)
         end = self.expression()
-        # end.print_tree(0)
+        end.print_tree(0)
         self.match_token(TokenType.step)
         step = self.expression()
-        # step.print_tree(0)
+        step.print_tree(0)
         self.match_token(TokenType.draw)
         self.match_token(TokenType.l_bracket)
         x = self.expression()
-        # x.print_tree(0)
+        x.print_tree(0)
         self.match_token(TokenType.comma)
         y = self.expression()
-        # y.print_tree(0)
+        y.print_tree(0)
         self.match_token(TokenType.r_bracket)
         draw_loop(get_value(start), get_value(end), get_value(step), x, y)
         return
 
     def expression(self):
+        """构造表达式语法树"""
         left = self.term()
         while self.current.type in [TokenType.plus, TokenType.minus]:
             token_tmp = self.current.type
@@ -278,7 +335,7 @@ class Parser:
             left = ExpressionNode(token_tmp, left=left, right=right)
         return left
 
-    def factor(self):  # 代表右结合的 +/-
+    def factor(self):
         if self.current.type == TokenType.plus:
             self.match_token(TokenType.plus)
             right = self.factor()
